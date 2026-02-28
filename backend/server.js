@@ -190,10 +190,11 @@ app.post("/create-cashfree-order", authMiddleware, async (req, res) => {
         order_amount: totalAmount,
         order_currency: "INR",
         customer_details: {
-          customer_id: req.user.id.toString(),
-          customer_email: req.user.email,
-          customer_name: req.user.name
-        },
+  customer_id: req.user.id.toString(),
+  customer_email: req.user.email,
+  customer_name: req.user.name,
+  customer_phone: "8072528506"
+},
         order_meta: {
           return_url: `${returnUrl}?order_id=${orderId}`
         }
