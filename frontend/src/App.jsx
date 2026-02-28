@@ -408,22 +408,27 @@ if (Array.isArray(masterMenuItems)) {
         const secureReturnUrl = window.location.origin;
 
         const response = await fetch(`${BACKEND_API_URL}/create-cashfree-order`, {
-          method: "POST", 
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-          body: JSON.stringify({ items: activeCartItems, returnUrl: secureReturnUrl })
-        });
+  method: "POST",
+  headers: { 
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`
+  },
+  body: JSON.stringify({
+    items: activeCartItems
+  })
+});
 
         const data = await response.json();
 
         if (response.ok && data.payment_session_id) {
           const cashfree = window.Cashfree({
-             mode: data.environment
-          });
+   mode: "production"
+});
           
           cashfree.checkout({
-             paymentSessionId: data.payment_session_id,
-             redirectTarget: "_self"
-          });
+   paymentSessionId: data.payment_session_id,
+   redirectTarget: "_modal"
+});
         } else {
           alert(`Order Creation Failed: ${data.message || 'Stock may be locked or unavailable.'}`);
           setIsOrderPlacing(false);
