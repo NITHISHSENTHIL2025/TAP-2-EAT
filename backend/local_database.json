@@ -1,0 +1,42 @@
+{
+  "users": [
+    {
+      "id": "usr_1772308182763",
+      "name": "nithish",
+      "email": "nithish412008@gmail.com",
+      "password": "$2b$10$xmjW65M4lHhSMb0lXRo7TuAVngrusfYbMTZIJFmxspRMymumm8cYK"
+    }
+  ],
+  "owner": [
+    {
+      "mkey": "admin26"
+    }
+  ],
+  "menu": [
+    {
+      "id": "m1",
+      "name": "Classic Burger",
+      "price": 120,
+      "category": "Fast Food",
+      "stock": 50,
+      "prep_time": 15
+    },
+    {
+      "id": "m2",
+      "name": "Crispy Fries",
+      "price": 80,
+      "category": "Snacks",
+      "stock": 100,
+      "prep_time": 10
+    },
+    {
+      "id": "m_1772308164640",
+      "name": "rice",
+      "price": 20,
+      "category": "Fast Food",
+      "stock": 10,
+      "prep_time": 2
+    }
+  ],
+  "orders": []
+}
