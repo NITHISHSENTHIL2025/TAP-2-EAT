@@ -52,7 +52,7 @@ const authMiddleware = (req, res, next) => {
     res.status(401).json({ message: "Token invalid." });
   }
 };
-const jwt = require("jsonwebtoken");
+
 
 function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
