@@ -9,7 +9,6 @@ const axios = require("axios");
 const { Pool } = require("pg");
 
 const app = express();
-const cors = require("cors");
 
 app.use(cors({
   origin: [
