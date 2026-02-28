@@ -223,13 +223,19 @@ app.post("/create-cashfree-order", authMiddleware, async (req, res) => {
 // ==========================
 // VERIFY PAYMENT
 // ==========================
-app.post("/verify-cashfree-payment", authMiddleware, async (req, res) => {
-  const { order_id, items, pickupTime, prepTimeTotal } = req.body;
-
+app.post("/verify-cashfree-payment", authenticateToken, async (req, res) => {
   try {
-    const verify = await axios.get(
+    const { order_id, items, pickupTime, prepTimeTotal } = req.body;
+
+    if (!order_id) {
+      return res.status(400).json({ message: "Missing order_id" });
+    }
+
+    // 🔹 1. Verify with Cashfree
+    const verifyResponse = await fetch(
       `https://api.cashfree.com/pg/orders/${order_id}`,
       {
+        method: "GET",
         headers: {
           "x-client-id": process.env.CASHFREE_APP_ID,
           "x-client-secret": process.env.CASHFREE_SECRET_KEY,
@@ -238,56 +244,53 @@ app.post("/verify-cashfree-payment", authMiddleware, async (req, res) => {
       }
     );
 
-    if (verify.data.order_status !== "PAID")
-      return res.status(400).json({ message: "Payment not successful." });
+    const verifyData = await verifyResponse.json();
 
-    const tokenResult = await pool.query(
-      "SELECT COALESCE(MAX(token_number),0)+1 AS next_token FROM orders"
-    );
+    if (!verifyResponse.ok || verifyData.order_status !== "PAID") {
+      return res.status(400).json({ message: "Payment not verified" });
+    }
 
-    const nextToken = tokenResult.rows[0].next_token;
+    // 🔹 2. Insert into YOUR actual table structure
+    const insertQuery = `
+      INSERT INTO orders
+      (user_name, user_email, items, total_amount, payment_id, status, pickup_time, prep_time_total)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *;
+    `;
 
-    const totalAmount = items.reduce(
-      (sum, item) => sum + (Number(item.price) * (item.quantity || 1)),
-      0
-    );
+    await pool.query(insertQuery, [
+      req.user.name,                  // from JWT
+      req.user.email,                 // from JWT
+      JSON.stringify(items),          // jsonb
+      verifyData.order_amount,
+      verifyData.cf_order_id,
+      "Preparing",
+      pickupTime || "ASAP",
+      prepTimeTotal || 15
+    ]);
 
-    await pool.query(
-      `INSERT INTO orders
-       (user_id,user_name,items,total_amount,token_number,pickup_time,prep_time_total,payment_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-      [
-        req.user.id,
-        req.user.name,
-        JSON.stringify(items),
-        totalAmount,
-        nextToken,
-        pickupTime,
-        prepTimeTotal,
-        order_id
-      ]
-    );
+    return res.status(200).json({ message: "Order stored successfully" });
 
-    res.json({ success: true });
-
-  } catch (err) {
-    console.error("Verification Error:", err.response?.data || err.message);
-    res.status(500).json({ message: "Verification failed." });
+  } catch (error) {
+    console.error("VERIFY ERROR:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 });
 
 // ==========================
 // ORDERS
 // ==========================
-app.get("/my-orders", authMiddleware, async (req, res) => {
+app.get("/my-orders", authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT * FROM orders WHERE user_id=$1 ORDER BY created_at DESC",
-      [req.user.id]
+      "SELECT * FROM orders WHERE user_email = $1 ORDER BY created_at DESC",
+      [req.user.email]
     );
-    res.json(result.rows);
-  } catch {
-    res.status(500).json({ message: "Fetch failed." });
+
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("MY-ORDERS ERROR:", error);
+    res.status(500).json({ message: "Failed to fetch orders" });
   }
 });
 
