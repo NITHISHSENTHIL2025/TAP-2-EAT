@@ -426,8 +426,8 @@ if (Array.isArray(masterMenuItems)) {
 });
           
           cashfree.checkout({
-   paymentSessionId: data.payment_session_id,
-   redirectTarget: "_modal"
+  paymentSessionId: data.payment_session_id,
+  redirectTarget: "_self"
 });
         } else {
           alert(`Order Creation Failed: ${data.message || 'Stock may be locked or unavailable.'}`);
