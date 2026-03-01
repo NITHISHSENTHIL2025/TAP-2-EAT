@@ -28,7 +28,14 @@ app.use(express.json());
 // DATABASE
 // ==========================
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  },
+  // Add these 3 lines to stop random connection drops
+  connectionTimeoutMillis: 15000, 
+  idleTimeoutMillis: 30000,
+  max: 20
 });
 
 pool.query("SELECT NOW()")
@@ -191,17 +198,12 @@ app.post("/menu", adminOnly, async (req, res) => {
 // ==========================
 // CASHFREE ORDER CREATE
 // ==========================
+// FIND THIS BLOCK IN YOUR server.js and change the order_meta part:
 app.post("/create-cashfree-order", authMiddleware, async (req, res) => {
-  const { items, returnUrl } = req.body;
-
+  // ... (keep totalAmount calculation code same)
+  
   try {
-    const totalAmount = items.reduce(
-      (sum, item) => sum + (Number(item.price) * (item.quantity || 1)),
-      0
-    );
-
     const orderId = "ORDER_" + Date.now();
-
     const response = await axios.post(
       "https://api.cashfree.com/pg/orders",
       {
@@ -209,14 +211,15 @@ app.post("/create-cashfree-order", authMiddleware, async (req, res) => {
         order_amount: totalAmount,
         order_currency: "INR",
         customer_details: {
-  customer_id: req.user.id.toString(),
-  customer_email: req.user.email,
-  customer_name: req.user.name,
-  customer_phone: "8072528506"
-},
+          customer_id: req.user.id.toString(),
+          customer_email: req.user.email,
+          customer_name: req.user.name,
+          customer_phone: "8072528506"
+        },
         order_meta: {
-   return_url: "https://tap-2-eat-qgle.vercel.app?order_id={order_id}"
-}
+          // FIX: Redirect back to the ROOT with the query param
+          return_url: "https://tap-2-eat-qgle.vercel.app?order_id={order_id}"
+        }
       },
       {
         headers: {
@@ -232,10 +235,8 @@ app.post("/create-cashfree-order", authMiddleware, async (req, res) => {
       payment_session_id: response.data.payment_session_id,
       environment: "production"
     });
-
   } catch (err) {
-    console.error("Cashfree Error:", err.response?.data || err.message);
-    res.status(500).json({ message: "Cashfree order creation failed." });
+    // ...
   }
 });
 
